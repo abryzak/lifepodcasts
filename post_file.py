@@ -5,6 +5,7 @@ import getpass
 import mimetypes
 import os
 import os.path
+import re
 import sys
 
 import gdata.sites.client
@@ -25,8 +26,7 @@ class Poster(object):
     except gdata.client.Error:
       exit('Login Error')
 
-    self.parentEntry = None
-    self.FindTopLevelEntry(parent_name)
+    self.parentEntry = self.FindTopLevelEntry(parent_name)
     if self.parentEntry is None:
       self.CreateFileCabinet(parent_name)
 
@@ -35,8 +35,7 @@ class Poster(object):
       uri = '%s?path=/%s' % (self.client.MakeContentFeedUri(), name)
       feed = self.client.GetContentFeed(uri=uri)
       if len(feed.entry) > 0:
-        self.parentEntry = feed.entry[0];
-
+        return feed.entry[0]
     except Exception as ex:
       exit(ex)
 
@@ -47,16 +46,27 @@ class Poster(object):
     except Exception as ex:
       exit(ex)
 
+  def FileTitle(self, filename):
+    return re.sub(r'[^a-zA-Z0-9_\.\-]+', '', filename)
+
   def PostFile(self, filepath):
+    filename = os.path.basename(filepath)
+    title = self.FileTitle(filename)
+    file_ex = filename[filename.rfind('.'):]
+    if not file_ex in mimetypes.types_map:
+      content_type = 'application/octet-stream'
+    else:
+      content_type = mimetypes.types_map[file_ex]
     try:
-      filename = os.path.basename(filepath)
-      file_ex = filename[filename.rfind('.'):]
-      if not file_ex in mimetypes.types_map:
-        content_type = 'application/octet-stream'
+      attachment = self.client.UploadAttachment(filepath, self.parentEntry, content_type=content_type, title=title);
+      return attachment.GetAlternateLink().href
+
+    except gdata.client.RequestError as ex:
+      if ex.status == 409:
+        print >> sys.stderr, 'duplicate: %s, finding url' % filename
+        return '%s/%s' % (self.parentEntry.GetAlternateLink().href, title)
       else:
-        content_type = mimetypes.types_map[file_ex]
-      attachment = self.client.UploadAttachment(filepath, self.parentEntry, content_type=content_type);
-      print attachment.GetAlternateLink().href
+        exit(ex)  
 
     except Exception as ex:
       exit(ex)
@@ -95,7 +105,7 @@ def main():
 
   poster = Poster(site_name=site, parent_name=parent, login_email=login_email, login_password=login_password)
   for arg in args:
-    poster.PostFile(arg)
+    print poster.PostFile(arg)
 
 if __name__ == '__main__':
   main()
