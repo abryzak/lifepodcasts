@@ -31,8 +31,8 @@ for FILE in "$DIR"/*; do
 done
 
 # find files that need posting
-unset FILES_TO_POST
 unset KEYS
+unset FILES_TO_POST
 SELECT=$(sqlite3 "$DB" "select md5, filename from files where file_url is null") ||
 	{ echo "$0: couldn't find files to post" >&2; exit 1; }
 while IFS=$'\n' read -r LINE; do
@@ -53,3 +53,45 @@ while IFS=$'\n' read -r FILE_URL; do
 		{ echo "$0: failed to set file_url" >&2; exit 1; }
 	IDX=$((IDX + 1))
 done <<< "$FILE_URLS"
+
+# find files that haven't got announcements yet
+unset KEYS
+unset FILENAMES
+unset FILE_URLS
+SELECT=$(sqlite3 "$DB" "select md5, filename, file_url from files where announce_url is null") ||
+	{ echo "$0: couldn't find announcements to create" >&2; exit 1; }
+while IFS=$'\n' read -r LINE; do
+	MD5=${LINE:0:32}
+	FILENAME=${LINE:33}
+	FILE_URL=${FILENAME#*|}
+	FILENAME=${FILENAME:0:${#FILENAME} - ${#FILE_URL} - 1}
+	KEYS[${#KEYS[@]}]=$MD5
+	FILENAMES[${#FILENAMES[@]}]=$FILENAME
+	FILE_URLS[${#FILE_URLS[@]}]=$FILE_URL
+done <<< "$SELECT"
+
+function title_from_filename {
+	FILENAME=$1
+	echo "$FILENAME"
+}
+
+function html_from_filename_and_url {
+	FILENAME=$1
+	FILE_URL=$2
+	cat <<-EOF
+		<p>Post for file <a href="$FILE_URL">$FILENAME</a>.</p>
+	EOF
+}
+
+# post announcements
+for (( IDX=0; IDX < ${#KEYS[@]}; ++IDX )); do
+	MD5=${KEYS[IDX]}
+	FILENAME=${FILENAMES[IDX]}
+	FILE_URL=${FILE_URLS[IDX]}
+	TITLE=$(title_from_filename "$FILENAME")
+	HTML=$(html_from_filename_and_url "$FILENAME" "$FILE_URL")
+	ANNOUNCE_URL=$("$BINDIR"/post_announcement.py "$TITLE" <<< "$HTML") ||
+		{ echo "$0: failed to post announcement for $FILENAME" >&2; exit 1; }
+	sqlite3 "$DB" "update files set announce_url = '$(escape_string "$ANNOUNCE_URL")' where md5 = '$(escape_string "$MD5")'" ||
+		{ echo "$0: failed to set announce_url" >&2; exit 1; }
+done
