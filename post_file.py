@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import getopt
 import getpass
@@ -28,7 +28,7 @@ class Poster(object):
 
     self.parentEntry = self.FindTopLevelEntry(parent_name)
     if self.parentEntry is None:
-      self.CreateFileCabinet(parent_name)
+      self.parentEntry = self.CreateFileCabinet(parent_name)
 
   def FindTopLevelEntry(self, name):
     try:
@@ -41,7 +41,7 @@ class Poster(object):
 
   def CreateFileCabinet(self, parent):
     try:
-      self.parentEntry = self.client.CreatePage('filecabinet', parent, page_name=parent)
+      return self.client.CreatePage('filecabinet', parent, page_name=parent)
 
     except Exception as ex:
       exit(ex)
