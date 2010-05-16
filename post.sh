@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 
+# check where we've been launched from
+BINDIR=$(cd "${0%/*}" && echo $PWD)
+
+# utility function for exiting
 function die {
 	echo "$@" >&2
 	exit 1
 }
 
-BINDIR=$(dirname "$0")
 DIR=$1
 [[ -d "$DIR" ]] || die "usage: $0 DIR"
 
@@ -41,6 +44,7 @@ unset FILES_TO_POST
 SELECT=$(sqlite3 "$DB" "select md5, filename from files where file_url is null") ||
 	die "$0: couldn't find files to post"
 while IFS=$'\n' read -r LINE; do
+	[[ -z "$LINE" ]] && continue
 	MD5=${LINE:0:32}
 	FILE="$DIR/${LINE:33}"
 	is_postable_file "$FILE" || continue
@@ -49,10 +53,11 @@ while IFS=$'\n' read -r LINE; do
 done <<< "$SELECT"
 
 # post the files and update db row
-FILE_URLS=$("$BINDIR"/post_file.py "${FILES_TO_POST[@]}") ||
+FILE_URLS=$("$BINDIR"/post_file.py ${GOOGLE_SITE:+--site $GOOGLE_SITE} "${FILES_TO_POST[@]}") ||
 	die "$0: failed to post files"
 IDX=0
 while IFS=$'\n' read -r FILE_URL; do
+	[[ -z "$FILE_URL" ]] && continue
 	MD5=${KEYS[IDX]}
 	sqlite3 "$DB" "update files set file_url = '$(escape_string "$FILE_URL")' where md5 = '$(escape_string "$MD5")'" ||
 		die "$0: failed to set file_url"
@@ -63,9 +68,10 @@ done <<< "$FILE_URLS"
 unset KEYS
 unset FILENAMES
 unset FILE_URLS
-SELECT=$(sqlite3 "$DB" "select md5, filename, file_url from files where announce_url is null") ||
+SELECT=$(sqlite3 "$DB" "select md5, filename, file_url from files where file_url is not null and announce_url is null") ||
 	die "$0: couldn't find announcements to create"
 while IFS=$'\n' read -r LINE; do
+	[[ -z "$LINE" ]] && continue
 	MD5=${LINE:0:32}
 	FILENAME=${LINE:33}
 	FILE_URL=${FILENAME#*|}
@@ -95,7 +101,7 @@ for (( IDX=0; IDX < ${#KEYS[@]}; ++IDX )); do
 	FILE_URL=${FILE_URLS[IDX]}
 	TITLE=$(title_from_filename "$FILENAME")
 	HTML=$(html_from_filename_and_url "$FILENAME" "$FILE_URL")
-	ANNOUNCE_URL=$("$BINDIR"/post_announcement.py "$TITLE" <<< "$HTML") ||
+	ANNOUNCE_URL=$("$BINDIR"/post_announcement.py ${GOOGLE_SITE:+--site $GOOGLE_SITE} "$TITLE" <<< "$HTML") ||
 		die "$0: failed to post announcement for $FILENAME"
 	sqlite3 "$DB" "update files set announce_url = '$(escape_string "$ANNOUNCE_URL")' where md5 = '$(escape_string "$MD5")'" ||
 		die "$0: failed to set announce_url"

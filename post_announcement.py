@@ -35,14 +35,14 @@ class AnnouncementPoster(object):
       feed = self.client.GetContentFeed(uri=uri)
       if len(feed.entry) > 0:
         return feed.entry[0]
-    except Exception as ex:
+    except Exception, ex:
       exit(ex)
 
   def CreateAnnouncementsPage(self):
     try:
       return self.client.CreatePage('announcementspage', 'Announcements')
 
-    except Exception as ex:
+    except Exception, ex:
       exit(ex)
 
   def PageName(self, title):
@@ -54,14 +54,14 @@ class AnnouncementPoster(object):
       attachment = self.client.CreatePage('announcement', title, html=html, parent=self.announcementsPageEntry, page_name=page_name);
       return attachment.GetAlternateLink().href
 
-    except gdata.client.RequestError as ex:
+    except gdata.client.RequestError, ex:
       if ex.status == 409:
         print >> sys.stderr, 'duplicate: %s, finding url' % title
         return '%s/%s' % (self.announcementsPageEntry.GetAlternateLink().href, page_name)
       else:
         exit(ex)  
 
-    except Exception as ex:
+    except Exception, ex:
       exit(ex)
 
 def main():

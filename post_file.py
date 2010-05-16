@@ -36,14 +36,14 @@ class Poster(object):
       feed = self.client.GetContentFeed(uri=uri)
       if len(feed.entry) > 0:
         return feed.entry[0]
-    except Exception as ex:
+    except Exception, ex:
       exit(ex)
 
   def CreateFileCabinet(self, parent):
     try:
       return self.client.CreatePage('filecabinet', parent, page_name=parent)
 
-    except Exception as ex:
+    except Exception, ex:
       exit(ex)
 
   def FileTitle(self, filename):
@@ -61,14 +61,14 @@ class Poster(object):
       attachment = self.client.UploadAttachment(filepath, self.parentEntry, content_type=content_type, title=title);
       return attachment.GetAlternateLink().href
 
-    except gdata.client.RequestError as ex:
+    except gdata.client.RequestError, ex:
       if ex.status == 409:
         print >> sys.stderr, 'duplicate: %s, finding url' % filename
         return '%s/%s' % (self.parentEntry.GetAlternateLink().href, title)
       else:
         exit(ex)  
 
-    except Exception as ex:
+    except Exception, ex:
       exit(ex)
 
 def main():
