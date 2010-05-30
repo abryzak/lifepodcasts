@@ -5,8 +5,6 @@ import os.path
 import re
 import sys
 
-sys.argv=["","dir/2010_05_03_PM_Ps Sacha Pace_How to be A Good Worshipper.mp3"]
-
 if len(sys.argv) != 2:
   sys.exit("usage: split_filename_into_parts.py filename")
 
