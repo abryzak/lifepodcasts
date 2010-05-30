@@ -29,7 +29,7 @@ function is_postable_file {
 }
 
 # add files to database
-for FILE in "$DIR"/*; do
+for FILE in "$DIR"/*.mp3; do
 	is_postable_file "$FILE" || continue
 	BASENAME=$(basename "$FILE")
 	MD5=$(openssl dgst -md5 <"$FILE") || die "$0: MD5 failed for file $FILE"
@@ -81,17 +81,43 @@ while IFS=$'\n' read -r LINE; do
 	FILE_URLS[${#FILE_URLS[@]}]=$FILE_URL
 done <<< "$SELECT"
 
-function title_from_filename {
-	FILENAME=$1
-	echo "$FILENAME"
+function input_to_lines {
+	unset LINES
+	while IFS='$\n' read -r LINE; do
+		LINES[${#LINES[@]}]=$LINE
+	done
 }
 
-function html_from_filename_and_url {
+function announcement_title {
+	FILENAME=$1
+	PARTS=$2
+	if [[ -z "$PARTS" ]]; then
+		echo "$FILENAME"
+	else
+		input_to_lines <<< "$PARTS"
+		echo "${LINES[2]} - ${LINES[3]} - ${LINES[0]} ${LINES[1]}"
+	fi
+}
+
+function announcement_html {
 	FILENAME=$1
 	FILE_URL=$2
-	cat <<-EOF
-		<p>Post for file <a href="$FILE_URL">$FILENAME</a>.</p>
-	EOF
+	PARTS=$3
+	if [[ -z "$PARTS" ]]; then
+		cat <<-EOF
+			<p>Post for file <a href="$FILE_URL">$FILENAME</a>.</p>
+		EOF
+	else
+		input_to_lines <<< "$PARTS"
+		cat <<-EOF
+			<p>
+			  Message: ${LINES[3]}<br />
+			  Date: ${LINES[0]}<br />
+			  Speaker: ${LINES[2]}<br />
+			</p>
+			<p>Link: <a href="$FILE_URL">$FILE_URL</a></p>
+		EOF
+	fi
 }
 
 # post announcements
@@ -99,8 +125,9 @@ for (( IDX=0; IDX < ${#KEYS[@]}; ++IDX )); do
 	MD5=${KEYS[IDX]}
 	FILENAME=${FILENAMES[IDX]}
 	FILE_URL=${FILE_URLS[IDX]}
-	TITLE=$(title_from_filename "$FILENAME")
-	HTML=$(html_from_filename_and_url "$FILENAME" "$FILE_URL")
+	PARTS=$("$BINDIR"/split_filename_into_parts.py "$FILENAME")
+	TITLE=$(announcement_title "$FILENAME" "$PARTS")
+	HTML=$(announcement_html "$FILENAME" "$FILE_URL" "$PARTS")
 	ANNOUNCE_URL=$("$BINDIR"/post_announcement.py ${GOOGLE_SITE:+--site $GOOGLE_SITE} "$TITLE" <<< "$HTML") ||
 		die "$0: failed to post announcement for $FILENAME"
 	sqlite3 "$DB" "update files set announce_url = '$(escape_string "$ANNOUNCE_URL")' where md5 = '$(escape_string "$MD5")'" ||
