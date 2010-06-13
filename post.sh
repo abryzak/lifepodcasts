@@ -53,7 +53,7 @@ while IFS=$'\n' read -r LINE; do
 done <<< "$SELECT"
 
 # post the files and update db row
-FILE_URLS=$("$BINDIR"/post_file.py ${GOOGLE_SITE:+--site $GOOGLE_SITE} "${FILES_TO_POST[@]}") ||
+FILE_URLS=$("$BINDIR"/post_file.py ${GOOGLE_SITE:+--site "$GOOGLE_SITE"} ${GOOGLE_DOMAIN:+--domain "$GOOGLE_DOMAIN"} "${FILES_TO_POST[@]}") ||
 	die "$0: failed to post files"
 IDX=0
 while IFS=$'\n' read -r FILE_URL; do
@@ -128,7 +128,7 @@ for (( IDX=0; IDX < ${#KEYS[@]}; ++IDX )); do
 	PARTS=$("$BINDIR"/split_filename_into_parts.py "$FILENAME")
 	TITLE=$(announcement_title "$FILENAME" "$PARTS")
 	HTML=$(announcement_html "$FILENAME" "$FILE_URL" "$PARTS")
-	ANNOUNCE_URL=$("$BINDIR"/post_announcement.py ${GOOGLE_SITE:+--site $GOOGLE_SITE} "$TITLE" <<< "$HTML") ||
+	ANNOUNCE_URL=$("$BINDIR"/post_announcement.py ${GOOGLE_SITE:+--site "$GOOGLE_SITE"} ${GOOGLE_DOMAIN:+--domain "$GOOGLE_DOMAIN"} "$TITLE" <<< "$HTML") ||
 		die "$0: failed to post announcement for $FILENAME"
 	sqlite3 "$DB" "update files set announce_url = '$(escape_string "$ANNOUNCE_URL")' where md5 = '$(escape_string "$MD5")'" ||
 		die "$0: failed to set announce_url"

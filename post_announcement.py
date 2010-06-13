@@ -10,12 +10,12 @@ import sys
 import gdata.sites.client
 import gdata.sites.data
 
-SOURCE_APP_NAME = 'abryzak-announcementPoster-v0.1'
+SOURCE_APP_NAME = 'abryzak-announcementPoster-v0.2'
 
 class AnnouncementPoster(object):
-  def __init__(self, site_name, login_email, login_password):
+  def __init__(self, site_name, domain, login_email, login_password):
     self.client = gdata.sites.client.SitesClient(
-        source=SOURCE_APP_NAME, site=site_name)
+        source=SOURCE_APP_NAME, site=site_name, domain=domain)
     self.client.ssl = True
 
     try:
@@ -68,9 +68,10 @@ def main():
   try:
     opts, args = getopt.getopt(sys.argv[1:], '', ['site='])
   except getopt.error, msg:
-    exit("""usage: python post_announcement.py [--site=<name>] title""")
+    exit("""usage: python post_announcement.py [--site=<name>] [--domain=<name>] title""")
 
   site = 'abryzak'
+  domain = None
   login_email = None
   login_password = None
   if 'GOOGLE_LOGIN' in os.environ:
@@ -81,6 +82,8 @@ def main():
   for option, arg in opts:
     if option == '--site':
       site = arg
+    if option == '--domain':
+      domain = arg
 
   if site is None:
     exit('No site provided')
@@ -89,7 +92,7 @@ def main():
   if login_password is None:
     exit('No login password provided')
 
-  poster = AnnouncementPoster(site_name=site, login_email=login_email, login_password=login_password)
+  poster = AnnouncementPoster(site_name=site, domain=domain, login_email=login_email, login_password=login_password)
   html=''
   for data in sys.stdin.read():
     html = html + data

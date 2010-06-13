@@ -11,12 +11,12 @@ import sys
 import gdata.sites.client
 import gdata.sites.data
 
-SOURCE_APP_NAME = 'abryzak-filePoster-v0.1'
+SOURCE_APP_NAME = 'abryzak-filePoster-v0.2'
 
 class Poster(object):
-  def __init__(self, site_name, parent_name, login_email, login_password):
+  def __init__(self, site_name, domain, parent_name, login_email, login_password):
     self.client = gdata.sites.client.SitesClient(
-        source=SOURCE_APP_NAME, site=site_name)
+        source=SOURCE_APP_NAME, site=site_name, domain=domain)
     self.client.ssl = True
 
     try:
@@ -73,11 +73,12 @@ class Poster(object):
 
 def main():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], '', ['site=', 'parent='])
+    opts, args = getopt.getopt(sys.argv[1:], '', ['site=', 'domain=', 'parent='])
   except getopt.error, msg:
-    exit("""usage: python post_file.py [--site=<name>] [filename...]""")
+    exit("""usage: python post_file.py [--site=<name>] [--domain=<name>] [--parent=<parent>] [filename...]""")
 
   site = 'abryzak'
+  domain = None
   parent = 'files'
   login_email = None
   login_password = None
@@ -89,6 +90,8 @@ def main():
   for option, arg in opts:
     if option == '--site':
       site = arg
+    if option == '--domain':
+      domain = arg
     if option == '--parent':
       parent = arg
 
@@ -103,7 +106,7 @@ def main():
 
   mimetypes.init()
 
-  poster = Poster(site_name=site, parent_name=parent, login_email=login_email, login_password=login_password)
+  poster = Poster(site_name=site, domain=domain, parent_name=parent, login_email=login_email, login_password=login_password)
   for arg in args:
     print poster.PostFile(arg)
 
