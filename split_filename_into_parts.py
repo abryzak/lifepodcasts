@@ -26,34 +26,48 @@ day = match.group(3)
 service_date = datetime.date(int(year), int(month), int(day))
 service_date_string = str(service_date.day) + service_date.strftime(" %b %Y")
 
+def normalise_value(value, normalised_regexes):
+  # we always want to remove extraneous whitespace
+  value = re.sub(r' {2,}', ' ', value.strip(' '))
+  for normalised_value in normalised_regexes:
+    for regex in normalised_regexes[normalised_value]:
+      if re.match(r"^ ?"+regex+r" ?$", value, re.I):
+        return normalised_value
+  return value
+
 # grab the service type
 match = re.match(r"([^-_.]+)[-_.]", fn)
 if match is None:
   sys.exit()
 fn = fn[match.end():]
-service_type = match.group(1).upper()
-service_type_string = service_type
-if service_type == "MSV":
-  service_type_string = "Massive"
-elif service_type == "PUP":
-  service_type_string = "PowerUp"
-elif re.match(r"(9(30)?)?AM$", service_type):
-  service_type_string = "Morning Service"
-elif re.match(r"((6|18)(00)?)?PM$", service_type):
-  service_type_string = "Generate"
+normalised_service_types = {
+  'Massive': ['massive', 'msv'],
+  'PowerUp': ['powerup', 'pup'],
+  'Morning Service': [r'(9(30)?)?am'],
+  'Generate': [r'gen(erate)?', r'(6(00)?)?pm'],
+}
+service_type = normalise_value(match.group(1), normalised_service_types)
 
 # grab the speaker
 match = re.match(r"([^_]+)[_]", fn)
 if match is None:
   sys.exit()
 fn = fn[match.end():]
-service_speaker = match.group(1)
+normalised_speakers = {
+  'Ps Ben Higgins': [r'(ps ?)?b(en)? ?higg[ie]ns?'],
+  'Ps Geoff Blight': [r'(ps ?)?(g(eoff)?|j(eff)?) ?blight'],
+  'Ps Lee Blight': [r'(ps ?)?l(ee)? ?blight'],
+  'Ps Sacha Pace': [r'(ps ?)?s(a[cs]ha)? ?pace'],
+}
+service_speaker = normalise_value(match.group(1), normalised_speakers)
 
 # the rest is the title
 service_title = fn
+service_title = re.sub(r' {2,}', ' ', service_title.strip(' '))
+service_title = re.sub(r'^- ?', '', service_title)
 
 # now that we have all the parts - output nice versions on each line
 print service_date_string
-print service_type_string
+print service_type
 print service_speaker
 print service_title
