@@ -34,8 +34,16 @@ for FILE in "$DIR"/*.mp3; do
 	BASENAME=$(basename "$FILE")
 	MD5=$(openssl dgst -md5 <"$FILE") || die "$0: MD5 failed for file $FILE"
 	# TODO handle renamed files
-	sqlite3 "$DB" "insert or ignore into files (md5, filename) values ('$(escape_string "$MD5")', '$(escape_string "$BASENAME")')" ||
-		die "$0: unable to insert entry into db"
+	FILE_IN_DB=$(sqlite3 "$DB" "select count(*) from files where md5 = '$(escape_string "$MD5")'") ||
+		die "$0: unable to query db"
+	if [[ "$FILE_IN_DB" == "0" ]]; then
+		if command -v id3v2 >/dev/null; then
+			id3v2 --delete-all "$FILE"
+			MD5=$(openssl dgst -md5 <"$FILE") || die "$0: MD5 failed for file $FILE"
+		fi
+		sqlite3 "$DB" "insert or ignore into files (md5, filename) values ('$(escape_string "$MD5")', '$(escape_string "$BASENAME")')" ||
+			die "$0: unable to insert entry into db"
+	fi
 done
 
 # find files that need posting
