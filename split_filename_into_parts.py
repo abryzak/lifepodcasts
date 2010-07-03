@@ -32,7 +32,7 @@ if match is None:
   sys.exit()
 fn = fn[match.end():]
 service_type = match.group(1).upper()
-service_type_string = None
+service_type_string = service_type
 if service_type == "MSV":
   service_type_string = "Massive"
 elif service_type == "PUP":
@@ -41,8 +41,6 @@ elif re.match(r"(9(30)?)?AM$", service_type):
   service_type_string = "Morning Service"
 elif re.match(r"((6|18)(00)?)?PM$", service_type):
   service_type_string = "Generate"
-if service_type_string is None:
-  sys.exit()
 
 # grab the speaker
 match = re.match(r"([^_]+)[_]", fn)
