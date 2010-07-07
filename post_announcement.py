@@ -66,7 +66,7 @@ class AnnouncementPoster(object):
 
 def main():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], '', ['site='])
+    opts, args = getopt.getopt(sys.argv[1:], '', ['site=', 'domain='])
   except getopt.error, msg:
     exit("""usage: python post_announcement.py [--site=<name>] [--domain=<name>] title""")
 
