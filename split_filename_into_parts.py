@@ -14,13 +14,11 @@ if fn.rfind(".") != -1:
   fn = fn[:fn.rfind(".")]
 
 # grab the service date
-match = re.match(r"((?:\d{2,})?\d\d)[-_.](\d\d)[-_.](\d\d)[-_.]", fn)
+match = re.match(r"(\d\d\d\d)[-_.](\d\d?)[-_.](\d\d?)[-_.]", fn)
 if match is None:
   sys.exit()
 fn = fn[match.end():]
 year = match.group(1)
-if len(year) == 2:
-  year = str(datetime.date.today().year / 100) + year
 month = match.group(2)
 day = match.group(3)
 service_date = datetime.date(int(year), int(month), int(day))
